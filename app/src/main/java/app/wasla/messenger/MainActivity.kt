@@ -3,16 +3,12 @@ package app.wasla.messenger
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
-import androidx.compose.animation.animateContentSize
-import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
@@ -23,6 +19,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -55,6 +52,18 @@ class MainActivity : ComponentActivity() {
 
 private data class Tab(val title: String, val icon: ImageVector)
 
+private val AppTabs = listOf(
+    Tab("الدردشات", Icons.Default.ChatBubble),
+    Tab("جهات الاتصال", Icons.Default.PeopleAlt),
+    Tab("القريبون", Icons.Default.WifiTethering),
+    Tab("المجموعات", Icons.Default.Groups),
+    Tab("الإعدادات", Icons.Default.Settings)
+)
+
+private val AppBackground = Brush.verticalGradient(
+    listOf(Color(0xFF142A43), Ink, Color(0xFF080E19))
+)
+
 @Composable
 private fun WaslaApp() {
     var selected by remember { mutableIntStateOf(0) }
@@ -69,21 +78,21 @@ private fun WaslaApp() {
 
     CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
         MaterialTheme(colorScheme = darkColorScheme(primary = Aqua, background = Ink, surface = DeepBlue)) {
-            Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Color(0xFF142A43), Ink, Color(0xFF080E19))))) {
+            Box(Modifier.fillMaxSize().background(AppBackground)) {
                 AmbientGlow(Modifier.align(Alignment.TopEnd).offset(x = 85.dp, y = 80.dp), Color(0xFF1B9DB8))
                 AmbientGlow(Modifier.align(Alignment.BottomStart).offset(x = (-100).dp, y = (-90).dp), Color(0xFF385A9A))
                 Column(Modifier.fillMaxSize().statusBarsPadding()) {
                     WaslaHeader()
                     Box(Modifier.weight(1f).fillMaxWidth()) {
                         when (selected) {
-                            0 -> ChatsHome(search, { search = it })
+                            0 -> ChatsHome()
                             1 -> FeatureEmpty(Icons.Default.PeopleAlt, "جهات الاتصال", "عند تنفيذ ربط جهات الاتصال ستظهر هنا الأسماء التي لديها حساب WASLA، مع تحكم كامل في إذن الوصول.")
                             2 -> FeatureEmpty(Icons.Default.WifiTethering, "اتصال قريب", "سيظهر هنا اكتشاف الأجهزة القريبة والاتصال المباشر. لن نعرض أجهزة وهمية أو ندّعي وجود اتصال غير فعّال.")
                             3 -> FeatureEmpty(Icons.Default.Groups, "المجموعات والقنوات", "ستتمكن هنا من إنشاء مجموعات وقنوات وإدارة أعضائها بعد توصيل نظام الحسابات والرسائل.")
                             else -> SettingsHome()
                         }
                     }
-                    GlassNavigation(tabs, selected) { selected = it }
+                    GlassNavigation(AppTabs, selected) { selected = it }
                     Spacer(Modifier.height(10.dp))
                 }
             }
@@ -93,7 +102,7 @@ private fun WaslaApp() {
 
 @Composable
 private fun AmbientGlow(modifier: Modifier, color: Color) {
-    Box(modifier.size(210.dp).clip(CircleShape).background(Brush.radialGradient(listOf(color.copy(alpha = .20f), color.copy(alpha = .06f), Color.Transparent))))
+    val glow = remember(color) { Brush.radialGradient(listOf(color.copy(alpha = .20f), color.copy(alpha = .06f), Color.Transparent)) }\n    Box(modifier.size(210.dp).clip(CircleShape).background(glow))
 }
 
 @Composable
@@ -138,7 +147,7 @@ private fun ChatsHome(search: String, onSearch: (String) -> Unit) {
             Icon(Icons.Default.Search, null, tint = Soft, modifier = Modifier.size(20.dp))
             Spacer(Modifier.width(10.dp))
             BasicTextField(
-                value = search, onValueChange = onSearch, singleLine = true,
+                value = search, onValueChange = { search = it }, singleLine = true,
                 textStyle = androidx.compose.ui.text.TextStyle(color = Ice, fontSize = 14.sp),
                 cursorBrush = Brush.verticalGradient(listOf(Aqua, Aqua)),
                 modifier = Modifier.weight(1f),
@@ -150,7 +159,7 @@ private fun ChatsHome(search: String, onSearch: (String) -> Unit) {
                 }
             )
             if (search.isNotEmpty()) {
-                Icon(Icons.Default.Close, "مسح البحث", tint = Soft, modifier = Modifier.size(18.dp).clickable { onSearch("") })
+                Icon(Icons.Default.Close, "مسح البحث", tint = Soft, modifier = Modifier.size(18.dp).clickable { search = "" })
             }
         }
         Spacer(Modifier.height(26.dp))
@@ -196,15 +205,15 @@ private fun GlassNavigation(tabs: List<Tab>, selected: Int, onSelect: (Int) -> U
         tabs.forEachIndexed { index, tab ->
             val active = selected == index
             val tint by animateColorAsState(if (active) Aqua else Color(0xFF9BAFC3), tween(220), label = "tabTint")
-            val pillHeight by animateDpAsState(if (active) 39.dp else 34.dp, tween(220), label = "tabHeight")
+            val labelAlpha by androidx.compose.animation.core.animateFloatAsState(if (active) 1f else 0f, tween(160), label = "tabLabel")
             Column(
                 Modifier.weight(1f).clip(RoundedCornerShape(17.dp)).clickable { onSelect(index) }
-                    .animateContentSize().padding(vertical = 1.dp),
+                    .padding(vertical = 1.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.Center
             ) {
                 Box(
-                    Modifier.height(pillHeight).fillMaxWidth(.78f).clip(RoundedCornerShape(15.dp))
+                    Modifier.height(37.dp).fillMaxWidth(.78f).clip(RoundedCornerShape(15.dp))
                         .background(if (active) Brush.verticalGradient(listOf(Color(0x5548CDE4), Color(0x332B91B8))) else Brush.verticalGradient(listOf(Color.Transparent, Color.Transparent)))
                         .border(if (active) 1.dp else 0.dp, if (active) Color(0x668BEFFF) else Color.Transparent, RoundedCornerShape(15.dp)),
                     contentAlignment = Alignment.Center
