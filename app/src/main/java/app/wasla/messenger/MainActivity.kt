@@ -66,15 +66,7 @@ private val AppBackground = Brush.verticalGradient(
 
 @Composable
 private fun WaslaApp() {
-    var selected by remember { mutableIntStateOf(0) }
-    var search by remember { mutableStateOf("") }
-    val tabs = listOf(
-        Tab("الدردشات", Icons.Default.ChatBubble),
-        Tab("جهات الاتصال", Icons.Default.PeopleAlt),
-        Tab("القريبون", Icons.Default.WifiTethering),
-        Tab("المجموعات", Icons.Default.Groups),
-        Tab("الإعدادات", Icons.Default.Settings)
-    )
+    var selected by rememberSaveable { mutableIntStateOf(0) }
 
     CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
         MaterialTheme(colorScheme = darkColorScheme(primary = Aqua, background = Ink, surface = DeepBlue)) {
@@ -102,7 +94,8 @@ private fun WaslaApp() {
 
 @Composable
 private fun AmbientGlow(modifier: Modifier, color: Color) {
-    val glow = remember(color) { Brush.radialGradient(listOf(color.copy(alpha = .20f), color.copy(alpha = .06f), Color.Transparent)) }\n    Box(modifier.size(210.dp).clip(CircleShape).background(glow))
+    val glow = remember(color) { Brush.radialGradient(listOf(color.copy(alpha = .20f), color.copy(alpha = .06f), Color.Transparent)) }
+    Box(modifier.size(210.dp).clip(CircleShape).background(glow))
 }
 
 @Composable
@@ -134,7 +127,8 @@ private fun GlassAction(icon: ImageVector, label: String) {
 }
 
 @Composable
-private fun ChatsHome(search: String, onSearch: (String) -> Unit) {
+private fun ChatsHome() {
+    var search by rememberSaveable { mutableStateOf("") }
     Column(Modifier.fillMaxSize().padding(horizontal = 20.dp)) {
         Text("مساحة تواصلك", color = Ice, fontSize = 26.sp, fontWeight = FontWeight.Bold)
         Text("كل محادثاتك واتصالاتك في مكان واحد", color = Soft, fontSize = 13.sp, modifier = Modifier.padding(top = 5.dp))
@@ -218,10 +212,7 @@ private fun GlassNavigation(tabs: List<Tab>, selected: Int, onSelect: (Int) -> U
                         .border(if (active) 1.dp else 0.dp, if (active) Color(0x668BEFFF) else Color.Transparent, RoundedCornerShape(15.dp)),
                     contentAlignment = Alignment.Center
                 ) { Icon(tab.icon, tab.title, tint = tint, modifier = Modifier.size(21.dp)) }
-                AnimatedVisibility(visible = active) {
-                    Text(tab.title, color = Aqua, fontSize = 9.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Clip)
-                }
-                if (!active) Spacer(Modifier.height(12.dp))
+                Text(tab.title, color = Aqua.copy(alpha = labelAlpha), fontSize = 9.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Clip)
             }
         }
     }
