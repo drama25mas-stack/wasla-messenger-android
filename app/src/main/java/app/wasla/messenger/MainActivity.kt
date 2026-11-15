@@ -72,7 +72,6 @@ private fun WaslaRoot() {
         val listener = FirebaseAuth.AuthStateListener { firebaseAuth ->
             val user = firebaseAuth.currentUser
             currentUser = user?.takeIf { it.isEmailVerified }
-            if (user != null && !user.isEmailVerified) firebaseAuth.signOut()
         }
         auth.addAuthStateListener(listener)
         onDispose { auth.removeAuthStateListener(listener) }
