@@ -2,6 +2,7 @@ plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
     id("org.jetbrains.kotlin.plugin.compose")
+    id("com.google.gms.google-services")
 }
 android {
     namespace = "app.wasla.messenger"
@@ -15,7 +16,6 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
     buildTypes {
-        debug { applicationIdSuffix = ".debug" }
         release {
             isMinifyEnabled = false
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
@@ -29,6 +29,8 @@ android {
     buildFeatures { compose = true }
 }
 dependencies {
+    implementation(platform("com.google.firebase:firebase-bom:35.2.0"))
+    implementation("com.google.firebase:firebase-auth")
     val composeBom = platform("androidx.compose:compose-bom:2025.10.00")
     implementation(composeBom)
     androidTestImplementation(composeBom)
