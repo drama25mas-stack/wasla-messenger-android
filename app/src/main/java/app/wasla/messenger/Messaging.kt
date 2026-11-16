@@ -308,6 +308,8 @@ private fun NewWaslaChatDialog(currentUser: FirebaseUser, onDismiss: () -> Unit,
 
 @Composable
 private fun WaslaChatScreen(currentUser: FirebaseUser, chat: WaslaChat, onBack: () -> Unit) {
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val readReceiptsEnabled = remember { context.getSharedPreferences("wasla_settings", android.content.Context.MODE_PRIVATE).getBoolean("read_receipts", true) }
     var messages by remember(chat.id) { mutableStateOf<List<WaslaMessage>>(emptyList()) }
     var draft by remember { mutableStateOf("") }
     var error by remember { mutableStateOf<String?>(null) }
@@ -316,7 +318,7 @@ private fun WaslaChatScreen(currentUser: FirebaseUser, chat: WaslaChat, onBack: 
     DisposableEffect(chat.id) {
         val registration = listenWaslaMessages(chat.id, { incoming ->
             messages = incoming; error = null
-            incoming.filter { it.senderId != currentUser.uid && currentUser.uid !in it.readBy }
+            if (readReceiptsEnabled) incoming.filter { it.senderId != currentUser.uid && currentUser.uid !in it.readBy } else emptyList()
                 .forEach { markDirectMessageRead(chat.id, it.id, currentUser.uid) }
         }, { error = it })
         onDispose { registration.remove() }
