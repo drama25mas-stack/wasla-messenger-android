@@ -1,29 +1,28 @@
 # WASLA — وصلة
 
-**Connect beyond internet.** Android-first messenger combining a Telegram-inspired glass interface with direct offline messaging and optional internet messaging.
+**تواصل بلا حدود** — تطبيق مراسلة Android باللغة العربية، مبني بـ Kotlin وJetpack Compose.
 
-## Current status
+## Implemented in the current codebase
 
-Phase 1 foundation:
-- Native Android app using Kotlin and Jetpack Compose.
-- Arabic RTL glass-inspired navigation shell.
-- App module, manifest and build configuration.
-- GitHub Actions workflow to build and upload a debug APK.
+- Email/password registration, email verification, sign-in and password reset through Firebase Authentication.
+- Firestore-backed one-to-one conversations with live message updates.
+- Firestore-backed group creation and live group messaging.
+- Direct nearby device discovery and one-to-one offline text exchange through Google Nearby Connections, with permission prompts and connection acceptance.
+- Firebase Cloud Messaging token registration, Android notification display service and Cloud Functions triggers for direct/group message notifications.
+- Firestore security rules for profiles, email lookup, private chats, groups, messages and notification device tokens.
+- GitHub Actions workflow that builds and uploads the Android debug APK.
 
-**Important:** this is an early UI and build foundation. Real accounts, contact discovery/matching, message delivery, end-to-end encryption, Nearby Connections, multi-hop mesh routing, media transfer, groups and backend sync are not implemented yet. UI previews are not a working messaging service.
+## Required Firebase activation
+
+The app source and APK build do not automatically create or deploy cloud resources. Complete the steps in [FIREBASE_SETUP.md](FIREBASE_SETUP.md): create the Firestore database, publish `firestore.rules`, and deploy Cloud Functions. Server push notifications remain inactive until functions are deployed. The repository uses the private GitHub Actions secret `GOOGLE_SERVICES_JSON`; do not commit the Firebase config file.
+
+## Still required before calling this a production-ready final release
+
+- Reviewed end-to-end encryption and key verification; current cloud message text is not end-to-end encrypted.
+- Multi-hop mesh/store-and-forward routing; nearby messaging currently supports direct nearby connections only.
+- Contact import/matching, media and file transfer, voice notes, location sharing, message reactions/replies/forwarding/pinning/search, read receipts and delivery states.
+- Full runtime testing on multiple physical Android devices, offline/network transition tests, security review, and release signing.
 
 ## Build
 
-GitHub Actions runs the Android debug build on pushes and manual workflow dispatch. Download the WASLA-debug-apk artifact from a successful workflow run.
-
-## Technical direction
-
-- Kotlin, Jetpack Compose, Material 3
-- Room for durable local message storage (planned)
-- Nearby Connections and Android wireless transports (planned)
-- Store-and-forward multi-hop relay with message IDs, TTL and deduplication (planned)
-- Optional authenticated backend and WebSocket sync (planned)
-
-## Security and privacy
-
-Contact access will be requested at runtime and used only for transparent contact matching. The app will not upload raw address books. A production contact-discovery design and reviewed end-to-end encryption protocol are required before launch.
+Open the repository's **Actions** tab and download the `WASLA-debug-apk` artifact from a successful run. The debug APK is installable for evaluation; it is not a signed Play Store release.
