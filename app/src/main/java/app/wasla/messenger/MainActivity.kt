@@ -315,7 +315,7 @@ private fun WaslaApp(currentUser: FirebaseUser, onSignOut: () -> Unit) {
                     Box(Modifier.weight(1f).fillMaxWidth()) {
                         when (selected) {
                             0 -> MessagingHome(currentUser)
-                            1 -> FeatureEmpty(Icons.Default.PeopleAlt, "جهات الاتصال", "عند تنفيذ ربط جهات الاتصال ستظهر هنا الأسماء التي لديها حساب WASLA، مع تحكم كامل في إذن الوصول.")
+                            1 -> ContactsHome(currentUser)
                             2 -> NearbyMessagingScreen()
                             3 -> GroupsHome(currentUser)
                             else -> SettingsHome(onSignOut)
