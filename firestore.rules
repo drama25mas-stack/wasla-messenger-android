@@ -31,7 +31,8 @@ service cloud.firestore {
       allow get, list: if signedIn() && request.auth.uid in resource.data.members;
       allow update: if signedIn()
         && request.auth.uid in resource.data.members
-        && request.resource.data.members == resource.data.members;
+        && request.resource.data.members == resource.data.members
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['lastMessage', 'updatedAt']);
       allow delete: if false;
 
       match /messages/{messageId} {
