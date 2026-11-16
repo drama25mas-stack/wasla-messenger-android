@@ -318,7 +318,7 @@ private fun WaslaApp(currentUser: FirebaseUser, onSignOut: () -> Unit) {
                             1 -> ContactsHome(currentUser)
                             2 -> NearbyMessagingScreen()
                             3 -> GroupsHome(currentUser)
-                            else -> SettingsHome(onSignOut)
+                            else -> SettingsHome(currentUser, onSignOut)
                         }
                     }
                     GlassNavigation(AppTabs, selected) { selected = it }
