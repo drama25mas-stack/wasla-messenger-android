@@ -30,7 +30,7 @@ import com.google.firebase.firestore.Query
 import java.util.UUID
 
 private data class WaslaGroup(val id: String, val name: String, val lastMessage: String, val updatedAt: Long)
-private data class GroupLine(val id: String, val senderId: String, val text: String)
+private data class GroupLine(val id: String, val senderId: String, val text: String, val readBy: List<String> = emptyList())
 
 private fun createWaslaGroup(user: FirebaseUser, name: String, members: List<WaslaProfile>, done: (WaslaGroup?, String?) -> Unit) {
     val all = (members + WaslaProfile(user.uid, user.displayName ?: user.email?.substringBefore("@").orEmpty(), user.email.orEmpty())).distinctBy { it.uid }
@@ -65,8 +65,12 @@ private fun listenGroupMessages(groupId: String, onChange: (List<GroupLine>) -> 
         .orderBy("createdAt", Query.Direction.ASCENDING)
         .addSnapshotListener { snapshot, error ->
             if (error != null) { onError("تعذر تحميل رسائل المجموعة."); return@addSnapshotListener }
-            onChange(snapshot?.documents.orEmpty().map { GroupLine(it.id, it.getString("senderId").orEmpty(), it.getString("text").orEmpty()) })
+            onChange(snapshot?.documents.orEmpty().map { GroupLine(it.id, it.getString("senderId").orEmpty(), it.getString("text").orEmpty(), it.get("readBy") as? List<String> ?: emptyList()) })
         }
+}
+
+private fun markGroupMessageRead(groupId: String, messageId: String, uid: String) {
+    FirebaseFirestore.getInstance().collection("groups").document(groupId).collection("messages").document(messageId).update("readBy", FieldValue.arrayUnion(uid))
 }
 
 private fun sendGroupLine(groupId: String, user: FirebaseUser, text: String, done: (Boolean) -> Unit) {
@@ -74,7 +78,7 @@ private fun sendGroupLine(groupId: String, user: FirebaseUser, text: String, don
     if (value.isEmpty() || value.length > 5000) { done(false); return }
     val ref = FirebaseFirestore.getInstance().collection("groups").document(groupId)
     val batch = FirebaseFirestore.getInstance().batch()
-    batch.set(ref.collection("messages").document(), mapOf("senderId" to user.uid, "text" to value, "createdAt" to FieldValue.serverTimestamp()))
+    batch.set(ref.collection("messages").document(), mapOf("senderId" to user.uid, "text" to value, "readBy" to listOf(user.uid), "createdAt" to FieldValue.serverTimestamp()))
     batch.update(ref, mapOf("lastMessage" to value, "updatedAt" to FieldValue.serverTimestamp()))
     batch.commit().addOnCompleteListener { done(it.isSuccessful) }
 }
@@ -192,7 +196,11 @@ private fun GroupThread(currentUser: FirebaseUser, group: WaslaGroup, onBack: ()
     var sending by remember { mutableStateOf(false) }
     val listState = androidx.compose.foundation.lazy.rememberLazyListState()
     DisposableEffect(group.id) {
-        val registration = listenGroupMessages(group.id, { lines = it; error = null }, { error = it })
+        val registration = listenGroupMessages(group.id, { incoming ->
+            lines = incoming; error = null
+            incoming.filter { it.senderId != currentUser.uid && currentUser.uid !in it.readBy }
+                .forEach { markGroupMessageRead(group.id, it.id, currentUser.uid) }
+        }, { error = it })
         onDispose { registration.remove() }
     }
     LaunchedEffect(lines.size) { if (lines.isNotEmpty()) listState.animateScrollToItem(lines.lastIndex) }
@@ -209,7 +217,10 @@ private fun GroupThread(currentUser: FirebaseUser, group: WaslaGroup, onBack: ()
             items(lines, key = { it.id }) { line ->
                 val mine = line.senderId == currentUser.uid
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = if (mine) Arrangement.Start else Arrangement.End) {
-                    Text(line.text, color = Color(0xFFEAF8FF), modifier = Modifier.widthIn(max = 290.dp).clip(RoundedCornerShape(17.dp)).background(if (mine) Color(0xFF14516A) else Color(0xFF26394E)).padding(12.dp))
+                    Column(horizontalAlignment = if (mine) Alignment.Start else Alignment.End) {
+                        Text(line.text, color = Color(0xFFEAF8FF), modifier = Modifier.widthIn(max = 290.dp).clip(RoundedCornerShape(17.dp)).background(if (mine) Color(0xFF14516A) else Color(0xFF26394E)).padding(12.dp))
+                        if (mine) Text(if (line.readBy.size > 1) "تمت القراءة • ${line.readBy.size - 1}" else "تم الإرسال", color = Color(0xFF8DEBFA), fontSize = 10.sp, modifier = Modifier.padding(horizontal = 5.dp))
+                    }
                 }
             }
         }
