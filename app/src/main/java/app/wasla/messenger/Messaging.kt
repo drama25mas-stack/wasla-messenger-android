@@ -287,3 +287,51 @@ private fun WaslaChatScreen(currentUser: FirebaseUser, chat: WaslaChat, onBack: 
         }
     }
 }
+
+
+@Composable
+fun ContactsHome(currentUser: FirebaseUser) {
+    var email by remember { mutableStateOf("") }
+    var loading by remember { mutableStateOf(false) }
+    var error by remember { mutableStateOf<String?>(null) }
+    var chat by remember { mutableStateOf<WaslaChat?>(null) }
+    if (chat != null) {
+        WaslaChatScreen(currentUser, chat!!, onBack = { chat = null })
+        return
+    }
+    CompositionLocalProvider(androidx.compose.ui.platform.LocalLayoutDirection provides androidx.compose.ui.unit.LayoutDirection.Rtl) {
+        Column(Modifier.fillMaxSize().padding(horizontal = 20.dp)) {
+            Text("جهات الاتصال", color = Color(0xFFEAF8FF), fontSize = 25.sp, fontWeight = FontWeight.Bold)
+            Text("ابحث عن أي شخص لديه حساب WASLA", color = Color(0xFF9BAFC3), fontSize = 12.sp, modifier = Modifier.padding(top = 4.dp))
+            Spacer(Modifier.height(20.dp))
+            OutlinedTextField(
+                value = email, onValueChange = { email = it; error = null },
+                modifier = Modifier.fillMaxWidth(), singleLine = true,
+                label = { Text("البريد الإلكتروني") },
+                keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.Email)
+            )
+            Spacer(Modifier.height(10.dp))
+            Button(
+                onClick = {
+                    loading = true
+                    error = null
+                    lookupWaslaUser(email) { profile, lookupError ->
+                        if (profile == null) { loading = false; error = lookupError }
+                        else openWaslaChat(currentUser, profile) { id, openError ->
+                            loading = false
+                            if (id == null) error = openError
+                            else chat = WaslaChat(id, profile.uid, profile.name, "", System.currentTimeMillis())
+                        }
+                    }
+                },
+                enabled = !loading && email.isNotBlank(),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                if (loading) CircularProgressIndicator(Modifier.size(18.dp)) else Text("بحث وفتح محادثة")
+            }
+            if (error != null) Text(error!!, color = Color(0xFFFFA0A0), fontSize = 12.sp, modifier = Modifier.padding(top = 10.dp))
+            Spacer(Modifier.height(20.dp))
+            Text("ملاحظة: البحث يتم بالبريد الإلكتروني المسجل، ولا يتم رفع دفتر عناوين هاتفك.", color = Color(0xFF9BAFC3), fontSize = 12.sp, lineHeight = 19.sp)
+        }
+    }
+}
