@@ -153,19 +153,19 @@ private fun AuthScreen(onAuthenticated: (FirebaseUser) -> Unit) {
                     if (isRegister) {
                         OutlinedTextField(
                             value = name, onValueChange = { name = it; message = null },
-                            modifier = Modifier.fillMaxWidth(), singleLine = true, label = { Text("الاسم") }
+                            modifier = Modifier.fillMaxWidth(), singleLine = true, colors = androidx.compose.material3.OutlinedTextFieldDefaults.colors(focusedTextColor = Ice, unfocusedTextColor = Ice, focusedLabelColor = Aqua, unfocusedLabelColor = Soft, cursorColor = Aqua, focusedBorderColor = Aqua, unfocusedBorderColor = GlassLine), label = { Text("الاسم") }
                         )
                         Spacer(Modifier.height(10.dp))
                     }
                     OutlinedTextField(
                         value = email, onValueChange = { email = it; message = null },
-                        modifier = Modifier.fillMaxWidth(), singleLine = true, label = { Text("البريد الإلكتروني") },
+                        modifier = Modifier.fillMaxWidth(), singleLine = true, colors = androidx.compose.material3.OutlinedTextFieldDefaults.colors(focusedTextColor = Ice, unfocusedTextColor = Ice, focusedLabelColor = Aqua, unfocusedLabelColor = Soft, cursorColor = Aqua, focusedBorderColor = Aqua, unfocusedBorderColor = GlassLine), label = { Text("البريد الإلكتروني") },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email)
                     )
                     Spacer(Modifier.height(10.dp))
                     OutlinedTextField(
                         value = password, onValueChange = { password = it; message = null },
-                        modifier = Modifier.fillMaxWidth(), singleLine = true, label = { Text("كلمة المرور") },
+                        modifier = Modifier.fillMaxWidth(), singleLine = true, colors = androidx.compose.material3.OutlinedTextFieldDefaults.colors(focusedTextColor = Ice, unfocusedTextColor = Ice, focusedLabelColor = Aqua, unfocusedLabelColor = Soft, cursorColor = Aqua, focusedBorderColor = Aqua, unfocusedBorderColor = GlassLine), label = { Text("كلمة المرور") },
                         visualTransformation = PasswordVisualTransformation(),
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password)
                     )
@@ -173,7 +173,7 @@ private fun AuthScreen(onAuthenticated: (FirebaseUser) -> Unit) {
                         Spacer(Modifier.height(10.dp))
                         OutlinedTextField(
                             value = confirmPassword, onValueChange = { confirmPassword = it; message = null },
-                            modifier = Modifier.fillMaxWidth(), singleLine = true, label = { Text("تأكيد كلمة المرور") },
+                            modifier = Modifier.fillMaxWidth(), singleLine = true, colors = androidx.compose.material3.OutlinedTextFieldDefaults.colors(focusedTextColor = Ice, unfocusedTextColor = Ice, focusedLabelColor = Aqua, unfocusedLabelColor = Soft, cursorColor = Aqua, focusedBorderColor = Aqua, unfocusedBorderColor = GlassLine), label = { Text("تأكيد كلمة المرور") },
                             visualTransformation = PasswordVisualTransformation(),
                             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password)
                         )
