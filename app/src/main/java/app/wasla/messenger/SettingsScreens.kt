@@ -174,6 +174,7 @@ private fun ProfileSettings(user: FirebaseUser, onSignOut: () -> Unit) {
     val context = LocalContext.current
     val prefs = remember { context.getSharedPreferences("wasla_settings", Context.MODE_PRIVATE) }
     var name by remember(user.uid) { mutableStateOf(user.displayName.orEmpty()) }
+    var phone by remember(user.uid) { mutableStateOf("") }
     var saving by remember { mutableStateOf(false) }
     var message by remember { mutableStateOf<String?>(null) }
     var avatarUri by remember { mutableStateOf(prefs.getString("avatar_${user.uid}", null)) }
@@ -199,14 +200,27 @@ private fun ProfileSettings(user: FirebaseUser, onSignOut: () -> Unit) {
         Spacer(Modifier.height(12.dp))
         OutlinedTextField(value = name, onValueChange = { name = it }, label = { Text("الاسم الظاهر") }, singleLine = true, modifier = Modifier.fillMaxWidth())
         Spacer(Modifier.height(10.dp))
+        OutlinedTextField(value = phone, onValueChange = { phone = it }, label = { Text("رقم الهاتف مع مفتاح الدولة") }, singleLine = true, modifier = Modifier.fillMaxWidth())
+        Spacer(Modifier.height(10.dp))
         Button(onClick = {
             if(name.trim().length < 2) { message = "الاسم لازم يكون حرفين على الأقل."; return@Button }
             saving = true
             val request = UserProfileChangeRequest.Builder().setDisplayName(name.trim()).build()
             user.updateProfile(request).addOnCompleteListener { task ->
-                if(task.isSuccessful) saveWaslaProfile(user, name.trim()) { ok ->
-                    saving = false
-                    message = if(ok) "تم تحديث اسم الملف الشخصي." else "تم تحديث الاسم، لكن تعذر مزامنته مع قاعدة البيانات."
+                if(task.isSuccessful) saveWaslaProfile(user, name.trim()) { profileOk ->
+                    if (phone.isBlank()) {
+                        saving = false
+                        message = if(profileOk) "تم تحديث اسم الملف الشخصي." else "تم تحديث الاسم، لكن تعذر مزامنته مع قاعدة البيانات."
+                    } else {
+                        saveWaslaPhone(user, phone) { phoneOk, phoneError ->
+                            saving = false
+                            message = when {
+                                !profileOk -> "تم تحديث الاسم، لكن تعذر مزامنته."
+                                phoneOk -> "تم تحديث الاسم ورقم الهاتف."
+                                else -> phoneError ?: "تعذر حفظ رقم الهاتف."
+                            }
+                        }
+                    }
                 } else { saving = false; message = "تعذر تحديث الاسم. حاول مرة أخرى." }
             }
         }, enabled = !saving, modifier = Modifier.fillMaxWidth()) {
