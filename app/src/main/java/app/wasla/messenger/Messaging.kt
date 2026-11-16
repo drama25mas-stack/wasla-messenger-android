@@ -49,7 +49,7 @@ fun saveWaslaProfile(user: FirebaseUser, displayName: String, done: (Boolean) ->
     batch.commit().addOnCompleteListener { done(it.isSuccessful) }
 }
 
-private fun lookupWaslaUser(email: String, done: (WaslaProfile?, String?) -> Unit) {
+fun lookupWaslaUser(email: String, done: (WaslaProfile?, String?) -> Unit) {
     val normalized = email.trim().lowercase()
     if (!android.util.Patterns.EMAIL_ADDRESS.matcher(normalized).matches()) {
         done(null, "اكتب بريد إلكتروني صحيح."); return
