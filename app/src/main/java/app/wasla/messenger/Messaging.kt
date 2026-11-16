@@ -37,7 +37,7 @@ private val WaslaDb get() = FirebaseFirestore.getInstance()
 
 data class WaslaProfile(val uid: String, val name: String, val email: String)
 data class WaslaChat(val id: String, val otherUid: String, val otherName: String, val lastMessage: String, val updatedAt: Long)
-data class WaslaMessage(val id: String, val senderId: String, val text: String, val createdAt: Long)
+data class WaslaMessage(val id: String, val senderId: String, val text: String, val createdAt: Long, val readBy: List<String> = emptyList())
 
 fun saveWaslaProfile(user: FirebaseUser, displayName: String, done: (Boolean) -> Unit) {
     val email = user.email?.trim()?.lowercase().orEmpty()
@@ -170,9 +170,13 @@ private fun listenWaslaMessages(chatId: String, onChange: (List<WaslaMessage>) -
         .addSnapshotListener { snapshot, error ->
             if (error != null) { onError("تعذر تحميل الرسائل."); return@addSnapshotListener }
             onChange(snapshot?.documents.orEmpty().map { doc ->
-                WaslaMessage(doc.id, doc.getString("senderId").orEmpty(), doc.getString("text").orEmpty(), doc.getTimestamp("createdAt")?.toDate()?.time ?: 0L)
+                WaslaMessage(doc.id, doc.getString("senderId").orEmpty(), doc.getString("text").orEmpty(), doc.getTimestamp("createdAt")?.toDate()?.time ?: 0L, doc.get("readBy") as? List<String> ?: emptyList())
             })
         }
+}
+
+private fun markDirectMessageRead(chatId: String, messageId: String, uid: String) {
+    WaslaDb.collection("chats").document(chatId).collection("messages").document(messageId).update("readBy", FieldValue.arrayUnion(uid))
 }
 
 private fun sendWaslaMessage(chatId: String, user: FirebaseUser, text: String, done: (Boolean) -> Unit) {
@@ -181,7 +185,7 @@ private fun sendWaslaMessage(chatId: String, user: FirebaseUser, text: String, d
     val chat = WaslaDb.collection("chats").document(chatId)
     val batch = WaslaDb.batch()
     val message = chat.collection("messages").document()
-    batch.set(message, mapOf("senderId" to user.uid, "text" to value, "createdAt" to FieldValue.serverTimestamp()))
+    batch.set(message, mapOf("senderId" to user.uid, "text" to value, "readBy" to listOf(user.uid), "createdAt" to FieldValue.serverTimestamp()))
     batch.update(chat, mapOf("lastMessage" to value, "updatedAt" to FieldValue.serverTimestamp()))
     batch.commit().addOnCompleteListener { done(it.isSuccessful) }
 }
@@ -310,7 +314,11 @@ private fun WaslaChatScreen(currentUser: FirebaseUser, chat: WaslaChat, onBack: 
     var sending by remember { mutableStateOf(false) }
     val listState = androidx.compose.foundation.lazy.rememberLazyListState()
     DisposableEffect(chat.id) {
-        val registration = listenWaslaMessages(chat.id, { messages = it; error = null }, { error = it })
+        val registration = listenWaslaMessages(chat.id, { incoming ->
+            messages = incoming; error = null
+            incoming.filter { it.senderId != currentUser.uid && currentUser.uid !in it.readBy }
+                .forEach { markDirectMessageRead(chat.id, it.id, currentUser.uid) }
+        }, { error = it })
         onDispose { registration.remove() }
     }
     LaunchedEffect(messages.size) {
@@ -336,6 +344,7 @@ private fun WaslaChatScreen(currentUser: FirebaseUser, chat: WaslaChat, onBack: 
                             .background(if (mine) Color(0xFF14516A) else Color(0xFF26394E)).padding(horizontal = 14.dp, vertical = 10.dp),
                         fontSize = 14.sp
                     )
+                    if (mine) Text(if (chat.otherUid in message.readBy) "✓✓" else "✓", color = if (chat.otherUid in message.readBy) Color(0xFF62DDF2) else Color(0xFF9BAFC3), fontSize = 11.sp, modifier = Modifier.align(Alignment.Bottom))
                 }
             }
         }
