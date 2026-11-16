@@ -41,10 +41,10 @@ private val SettingsAqua = Color(0xFF8DEBFA)
 private val SettingsCard = Color(0x241EADC8)
 
 @Composable
-fun SettingsHome(currentUser: FirebaseUser, onSignOut: () -> Unit) {
+fun SettingsHome(currentUser: FirebaseUser, onSignOut: () -> Unit, startAtProfile: Boolean = false) {
     val context = LocalContext.current
     val prefs = remember { context.getSharedPreferences("wasla_settings", Context.MODE_PRIVATE) }
-    var page by remember { mutableStateOf("home") }
+    var page by remember(startAtProfile) { mutableStateOf(if (startAtProfile) "profile" else "home") }
     var notice by remember { mutableStateOf<String?>(null) }
     var notifications by remember { mutableStateOf(prefs.getBoolean("notifications", true)) }
     var readReceipts by remember { mutableStateOf(prefs.getBoolean("read_receipts", true)) }
@@ -233,4 +233,24 @@ private fun ProfileSettings(user: FirebaseUser, onSignOut: () -> Unit) {
             }
         }, confirmButton = { TextButton(onClick = { showQr = false }) { Text("إغلاق") } })
     }
+}
+
+@Composable
+fun WaslaQrDialog(user: FirebaseUser, onDismiss: () -> Unit) {
+    val qrBitmap = remember(user.uid) {
+        try {
+            val matrix = MultiFormatWriter().encode("WASLA:${user.uid}", BarcodeFormat.QR_CODE, 640, 640)
+            Bitmap.createBitmap(640, 640, Bitmap.Config.RGB_565).also { bmp ->
+                for (x in 0 until 640) for (y in 0 until 640) {
+                    bmp.setPixel(x, y, if (matrix[x, y]) android.graphics.Color.BLACK else android.graphics.Color.WHITE)
+                }
+            }.asImageBitmap()
+        } catch (_: Exception) { null }
+    }
+    AlertDialog(onDismissRequest = onDismiss, title = { Text("رمز WASLA الشخصي") }, text = {
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            if (qrBitmap != null) Image(qrBitmap, null, modifier = Modifier.fillMaxWidth().aspectRatio(1f))
+            Text("امسح الرمز لمشاركة معرّف حسابك.", textAlign = TextAlign.Center, color = SettingsSoft, fontSize = 11.sp)
+        }
+    }, confirmButton = { TextButton(onClick = onDismiss) { Text("إغلاق") } })
 }
