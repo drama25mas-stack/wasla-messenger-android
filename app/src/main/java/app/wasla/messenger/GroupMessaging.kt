@@ -200,8 +200,14 @@ private fun GroupThread(currentUser: FirebaseUser, group: WaslaGroup, onBack: ()
     DisposableEffect(group.id) {
         val registration = listenGroupMessages(group.id, { incoming ->
             lines = incoming; error = null
-            if (readReceiptsEnabled) incoming.filter { it.senderId != currentUser.uid && currentUser.uid !in it.readBy } else emptyList()
-                .forEach { markGroupMessageRead(group.id, it.id, currentUser.uid) }
+            val unread = if (readReceiptsEnabled) {
+                incoming.filter { it.senderId != currentUser.uid && currentUser.uid !in it.readBy }
+            } else {
+                emptyList()
+            }
+            unread.forEach { line ->
+                markGroupMessageRead(group.id, line.id, currentUser.uid)
+            }
         }, { error = it })
         onDispose { registration.remove() }
     }
