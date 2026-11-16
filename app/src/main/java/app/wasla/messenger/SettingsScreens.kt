@@ -95,7 +95,7 @@ fun SettingsHome(currentUser: FirebaseUser, onSignOut: () -> Unit, startAtProfil
                 SettingsSwitch("إظهار رقم الهاتف في ملفك", "تحكم في عرضه داخل واجهة التطبيق؛ لا يعني نشره في دليل عام.", showPhone) {
                     showPhone = it; prefs.edit().putBoolean("show_phone", it).apply()
                 }
-                SettingsSwitch("إيصالات القراءة", "حفظ تفضيل إيصالات القراءة محليًا. لم يتم تفعيل مزامنتها بعد.", readReceipts) {
+                SettingsSwitch("إيصالات القراءة", "عند تفعيلها، سيظهر للآخرين أنك قرأت رسائلهم.", readReceipts) {
                     readReceipts = it; prefs.edit().putBoolean("read_receipts", it).apply()
                 }
                 SettingsRow(Icons.Default.Lock, "حماية الحساب", "تأكيد البريد الإلكتروني وإعادة تعيين كلمة المرور من شاشة الدخول") {
