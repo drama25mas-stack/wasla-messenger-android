@@ -15,6 +15,7 @@ import androidx.compose.material.icons.filled.Send
 import androidx.compose.material.icons.filled.PersonAdd
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -134,9 +135,16 @@ fun MessagingHome(currentUser: FirebaseUser) {
     var error by remember { mutableStateOf<String?>(null) }
     var selected by remember { mutableStateOf<WaslaChat?>(null) }
     var showNew by remember { mutableStateOf(false) }
+    var search by rememberSaveable { mutableStateOf("") }
     DisposableEffect(currentUser.uid) {
         val registration = listenWaslaChats(currentUser.uid, { chats = it; error = null }, { error = it })
         onDispose { registration.remove() }
+    }
+    val filteredChats = remember(chats, search) {
+        val query = search.trim()
+        if (query.isEmpty()) chats else chats.filter {
+            it.otherName.contains(query, ignoreCase = true) || it.lastMessage.contains(query, ignoreCase = true)
+        }
     }
     if (selected != null) {
         WaslaChatScreen(currentUser, selected!!, onBack = { selected = null })
@@ -154,21 +162,30 @@ fun MessagingHome(currentUser: FirebaseUser) {
                 }
             }
             Spacer(Modifier.height(18.dp))
+            OutlinedTextField(
+                value = search,
+                onValueChange = { search = it },
+                modifier = Modifier.fillMaxWidth(),
+                singleLine = true,
+                label = { Text("ابحث في المحادثات") },
+                leadingIcon = { Icon(Icons.Default.Chat, contentDescription = null) }
+            )
+            Spacer(Modifier.height(12.dp))
             if (error != null) Text(error!!, color = Color(0xFFFFA0A0), fontSize = 12.sp, modifier = Modifier.padding(bottom = 10.dp))
-            if (chats.isEmpty()) {
+            if (filteredChats.isEmpty()) {
                 Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.padding(20.dp)) {
                         Icon(Icons.Default.Chat, null, tint = Color(0xFF8DEBFA), modifier = Modifier.size(54.dp))
                         Spacer(Modifier.height(14.dp))
-                        Text("لسه مفيش محادثات", color = Color(0xFFEAF8FF), fontSize = 19.sp, fontWeight = FontWeight.Bold)
-                        Text("اضغط على علامة إضافة شخص وابدأ محادثة باستخدام بريده الإلكتروني.", color = Color(0xFF9BAFC3), textAlign = TextAlign.Center, fontSize = 13.sp, modifier = Modifier.padding(top = 8.dp))
+                        Text(if (chats.isEmpty()) "لسه مفيش محادثات" else "مفيش نتائج مطابقة", color = Color(0xFFEAF8FF), fontSize = 19.sp, fontWeight = FontWeight.Bold)
+                        Text(if (chats.isEmpty()) "اضغط على علامة إضافة شخص وابدأ محادثة باستخدام بريده الإلكتروني." else "جرّب اسمًا أو كلمة مختلفة.", color = Color(0xFF9BAFC3), textAlign = TextAlign.Center, fontSize = 13.sp, modifier = Modifier.padding(top = 8.dp))
                         Spacer(Modifier.height(16.dp))
                         Button(onClick = { showNew = true }) { Text("ابدأ محادثة") }
                     }
                 }
             } else {
                 LazyColumn(verticalArrangement = Arrangement.spacedBy(9.dp), contentPadding = PaddingValues(bottom = 20.dp)) {
-                    items(chats, key = { it.id }) { chat ->
+                    items(filteredChats, key = { it.id }) { chat ->
                         Row(
                             Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(Color(0x241EADC8))
                                 .clickable { selected = chat }.padding(14.dp),
