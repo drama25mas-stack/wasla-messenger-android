@@ -219,6 +219,7 @@ private fun AuthScreen(onAuthenticated: (FirebaseUser) -> Unit) {
                                     } else {
                                         val user = auth.currentUser
                                         if (user?.isEmailVerified == true) {
+                                            saveWaslaProfile(user, user.displayName ?: user.email?.substringBefore("@").orEmpty()) { }
                                             loading = false
                                             onAuthenticated(user)
                                         } else if (user != null) {
