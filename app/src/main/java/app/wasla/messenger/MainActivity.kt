@@ -193,19 +193,20 @@ private fun AuthScreen(onAuthenticated: (FirebaseUser) -> Unit) {
                                             showError("تم إنشاء الحساب لكن تعذر تحميل بياناته.")
                                         } else {
                                             user.updateProfile(profile).addOnCompleteListener {
-                                                saveWaslaProfile(user, name.trim()) { }
-                                                user.sendEmailVerification().addOnCompleteListener { verification ->
-                                                    auth.signOut()
-                                                    loading = false
-                                                    isError = !verification.isSuccessful
-                                                    message = if (verification.isSuccessful) {
-                                                        "تم إنشاء الحساب. افتح بريدك واضغط رابط التفعيل، ثم سجّل الدخول."
-                                                    } else {
-                                                        "تم إنشاء الحساب، لكن تعذر إرسال رسالة التفعيل. جرّب تسجيل الدخول لإعادة الإرسال."
+                                                saveWaslaProfile(user, name.trim()) { profileSaved ->
+                                                    user.sendEmailVerification().addOnCompleteListener { verification ->
+                                                        auth.signOut()
+                                                        loading = false
+                                                        isError = !verification.isSuccessful || !profileSaved
+                                                        message = when {
+                                                            !profileSaved -> "تم إنشاء الحساب، لكن قاعدة بيانات المحادثات غير جاهزة. يلزم تفعيل Cloud Firestore ونشر firestore.rules."
+                                                            verification.isSuccessful -> "تم إنشاء الحساب. افتح بريدك واضغط رابط التفعيل، ثم سجّل الدخول."
+                                                            else -> "تم إنشاء الحساب، لكن تعذر إرسال رسالة التفعيل. جرّب تسجيل الدخول لإعادة الإرسال."
+                                                        }
+                                                        isRegister = false
+                                                        password = ""
+                                                        confirmPassword = ""
                                                     }
-                                                    isRegister = false
-                                                    password = ""
-                                                    confirmPassword = ""
                                                 }
                                             }
                                         }
