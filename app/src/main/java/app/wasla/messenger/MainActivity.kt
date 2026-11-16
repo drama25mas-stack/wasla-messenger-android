@@ -304,6 +304,8 @@ private val AppBackground = Brush.verticalGradient(
 @Composable
 private fun WaslaApp(currentUser: FirebaseUser, onSignOut: () -> Unit) {
     var selected by rememberSaveable { mutableIntStateOf(0) }
+    var openProfile by rememberSaveable { mutableStateOf(false) }
+    var showHeaderQr by remember { mutableStateOf(false) }
 
     CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
         MaterialTheme(colorScheme = darkColorScheme(primary = Aqua, background = Ink, surface = DeepBlue)) {
@@ -311,17 +313,18 @@ private fun WaslaApp(currentUser: FirebaseUser, onSignOut: () -> Unit) {
                 AmbientGlow(Modifier.align(Alignment.TopEnd).offset(x = 85.dp, y = 80.dp), Color(0xFF1B9DB8))
                 AmbientGlow(Modifier.align(Alignment.BottomStart).offset(x = (-100).dp, y = (-90).dp), Color(0xFF385A9A))
                 Column(Modifier.fillMaxSize().statusBarsPadding()) {
-                    WaslaHeader()
+                    WaslaHeader(onQrClick = { showHeaderQr = true }, onEditClick = { selected = 4; openProfile = true })
                     Box(Modifier.weight(1f).fillMaxWidth()) {
                         when (selected) {
                             0 -> MessagingHome(currentUser)
                             1 -> ContactsHome(currentUser)
                             2 -> NearbyMessagingScreen()
                             3 -> GroupsHome(currentUser)
-                            else -> SettingsHome(currentUser, onSignOut)
+                            else -> SettingsHome(currentUser, onSignOut, startAtProfile = openProfile)
                         }
                     }
                     GlassNavigation(AppTabs, selected) { selected = it }
+                    if (showHeaderQr) WaslaQrDialog(currentUser) { showHeaderQr = false }
                     Spacer(Modifier.height(10.dp))
                 }
             }
@@ -336,7 +339,7 @@ private fun AmbientGlow(modifier: Modifier, color: Color) {
 }
 
 @Composable
-private fun WaslaHeader() {
+private fun WaslaHeader(onQrClick: () -> Unit, onEditClick: () -> Unit) {
     Row(
         Modifier.fillMaxWidth().padding(start = 22.dp, end = 22.dp, top = 14.dp, bottom = 18.dp),
         verticalAlignment = Alignment.CenterVertically,
@@ -347,16 +350,16 @@ private fun WaslaHeader() {
             Text("تواصل بلا حدود", color = Aqua.copy(alpha = .9f), fontSize = 12.sp, letterSpacing = .5.sp)
         }
         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            GlassAction(Icons.Default.QrCodeScanner, "رمز QR")
-            GlassAction(Icons.Default.Edit, "رسالة جديدة")
+            GlassAction(Icons.Default.QrCodeScanner, "رمز QR", onQrClick)
+            GlassAction(Icons.Default.Edit, "تعديل الملف الشخصي", onEditClick)
         }
     }
 }
 
 @Composable
-private fun GlassAction(icon: ImageVector, label: String) {
+private fun GlassAction(icon: ImageVector, label: String, onClick: () -> Unit) {
     Box(
-        Modifier.size(44.dp).shadow(12.dp, RoundedCornerShape(16.dp)).clip(RoundedCornerShape(16.dp))
+        Modifier.size(44.dp).shadow(12.dp, RoundedCornerShape(16.dp)).clip(RoundedCornerShape(16.dp)).clickable(onClick = onClick)
             .background(Brush.linearGradient(listOf(Color(0x44FFFFFF), Color(0x1117A9C7))))
             .border(1.dp, GlassLine, RoundedCornerShape(16.dp)),
         contentAlignment = Alignment.Center
