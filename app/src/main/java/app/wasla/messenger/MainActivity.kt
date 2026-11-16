@@ -6,6 +6,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -44,6 +45,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -137,7 +139,8 @@ private fun AuthScreen(onAuthenticated: (FirebaseUser) -> Unit) {
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.Center
             ) {
-                Text("WASLA", color = Ice, fontSize = 34.sp, fontWeight = FontWeight.Black, letterSpacing = 3.sp)
+                Image(painter = painterResource(R.drawable.ic_wasla_foreground), contentDescription = "WASLA", modifier = Modifier.size(92.dp))
+                Text("WASLA", color = Ice, fontSize = 30.sp, fontWeight = FontWeight.Black, letterSpacing = 3.sp)
                 Text("تواصل بلا حدود", color = Aqua, fontSize = 14.sp, modifier = Modifier.padding(top = 5.dp))
                 Spacer(Modifier.height(28.dp))
                 Column(
@@ -345,9 +348,12 @@ private fun WaslaHeader(onQrClick: () -> Unit, onEditClick: () -> Unit) {
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
-        Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
-            Text("WASLA", color = Ice, fontSize = 27.sp, fontWeight = FontWeight.Black, letterSpacing = 2.5.sp)
-            Text("تواصل بلا حدود", color = Aqua.copy(alpha = .9f), fontSize = 12.sp, letterSpacing = .5.sp)
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(9.dp)) {
+            Image(painter = painterResource(R.drawable.ic_wasla_foreground), contentDescription = "WASLA", modifier = Modifier.size(46.dp))
+            Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                Text("WASLA", color = Ice, fontSize = 24.sp, fontWeight = FontWeight.Black, letterSpacing = 2.2.sp)
+                Text("تواصل بلا حدود", color = Aqua.copy(alpha = .9f), fontSize = 11.sp, letterSpacing = .4.sp)
+            }
         }
         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             GlassAction(Icons.Default.QrCodeScanner, "رمز QR", onQrClick)
