@@ -190,6 +190,8 @@ private fun CreateGroupDialog(currentUser: FirebaseUser, onDismiss: () -> Unit, 
 
 @Composable
 private fun GroupThread(currentUser: FirebaseUser, group: WaslaGroup, onBack: () -> Unit) {
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val readReceiptsEnabled = remember { context.getSharedPreferences("wasla_settings", android.content.Context.MODE_PRIVATE).getBoolean("read_receipts", true) }
     var lines by remember(group.id) { mutableStateOf<List<GroupLine>>(emptyList()) }
     var draft by remember { mutableStateOf("") }
     var error by remember { mutableStateOf<String?>(null) }
@@ -198,7 +200,7 @@ private fun GroupThread(currentUser: FirebaseUser, group: WaslaGroup, onBack: ()
     DisposableEffect(group.id) {
         val registration = listenGroupMessages(group.id, { incoming ->
             lines = incoming; error = null
-            incoming.filter { it.senderId != currentUser.uid && currentUser.uid !in it.readBy }
+            if (readReceiptsEnabled) incoming.filter { it.senderId != currentUser.uid && currentUser.uid !in it.readBy } else emptyList()
                 .forEach { markGroupMessageRead(group.id, it.id, currentUser.uid) }
         }, { error = it })
         onDispose { registration.remove() }
