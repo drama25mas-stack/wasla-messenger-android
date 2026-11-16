@@ -363,33 +363,75 @@ private fun WaslaChatScreen(currentUser: FirebaseUser, chat: WaslaChat, onBack: 
 }
 
 
+private fun readDeviceContacts(context: android.content.Context): List<Pair<String, String>> {
+    val result = mutableListOf<Pair<String, String>>()
+    val cursor = context.contentResolver.query(
+        android.provider.ContactsContract.CommonDataKinds.Phone.CONTENT_URI,
+        arrayOf(
+            android.provider.ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME,
+            android.provider.ContactsContract.CommonDataKinds.Phone.NUMBER
+        ),
+        null, null,
+        android.provider.ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME + " COLLATE NOCASE ASC"
+    )
+    cursor?.use {
+        val nameIndex = it.getColumnIndex(android.provider.ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME)
+        val numberIndex = it.getColumnIndex(android.provider.ContactsContract.CommonDataKinds.Phone.NUMBER)
+        while (it.moveToNext()) {
+            val name = if (nameIndex >= 0) it.getString(nameIndex).orEmpty() else ""
+            val number = if (numberIndex >= 0) it.getString(numberIndex).orEmpty() else ""
+            if (name.isNotBlank() && number.isNotBlank()) result.add(name to number)
+        }
+    }
+    return result.distinctBy { normalizeWaslaPhone(it.second) }
+}
+
 @Composable
 fun ContactsHome(currentUser: FirebaseUser) {
-    var email by remember { mutableStateOf("") }
+    val context = androidx.compose.ui.platform.LocalContext.current
+    var search by remember { mutableStateOf("") }
     var loading by remember { mutableStateOf(false) }
     var error by remember { mutableStateOf<String?>(null) }
     var chat by remember { mutableStateOf<WaslaChat?>(null) }
+    var deviceContacts by remember { mutableStateOf<List<Pair<String, String>>>(emptyList()) }
+    var permissionGranted by remember {
+        mutableStateOf(context.checkSelfPermission(android.Manifest.permission.READ_CONTACTS) == android.content.pm.PackageManager.PERMISSION_GRANTED)
+    }
+    val permissionLauncher = androidx.activity.compose.rememberLauncherForActivityResult(
+        androidx.activity.result.contract.ActivityResultContracts.RequestPermission()
+    ) { granted ->
+        permissionGranted = granted
+        if (granted) deviceContacts = readDeviceContacts(context)
+    }
     if (chat != null) {
         WaslaChatScreen(currentUser, chat!!, onBack = { chat = null })
         return
     }
+    androidx.compose.runtime.LaunchedEffect(permissionGranted) {
+        if (permissionGranted && deviceContacts.isEmpty()) {
+            deviceContacts = readDeviceContacts(context)
+        }
+    }
     CompositionLocalProvider(androidx.compose.ui.platform.LocalLayoutDirection provides androidx.compose.ui.unit.LayoutDirection.Rtl) {
         Column(Modifier.fillMaxSize().padding(horizontal = 20.dp)) {
             Text("جهات الاتصال", color = Color(0xFFEAF8FF), fontSize = 25.sp, fontWeight = FontWeight.Bold)
-            Text("ابحث عن أي شخص لديه حساب WASLA", color = Color(0xFF9BAFC3), fontSize = 12.sp, modifier = Modifier.padding(top = 4.dp))
-            Spacer(Modifier.height(20.dp))
+            Text("ابحث بالبريد أو رقم الهاتف، أو اعرض جهات اتصال جهازك", color = Color(0xFF9BAFC3), fontSize = 12.sp, modifier = Modifier.padding(top = 4.dp))
+            Spacer(Modifier.height(16.dp))
             OutlinedTextField(
-                value = email, onValueChange = { email = it; error = null },
+                value = search, onValueChange = { search = it; error = null },
                 modifier = Modifier.fillMaxWidth(), singleLine = true,
-                label = { Text("البريد الإلكتروني") },
-                keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.Email)
+                label = { Text("البريد الإلكتروني أو رقم الهاتف") },
+                keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
+                    keyboardType = if (search.contains("@")) androidx.compose.ui.text.input.KeyboardType.Email else androidx.compose.ui.text.input.KeyboardType.Phone
+                )
             )
             Spacer(Modifier.height(10.dp))
             Button(
                 onClick = {
                     loading = true
                     error = null
-                    lookupWaslaUser(email) { profile, lookupError ->
+                    val query = search.trim()
+                    val lookup: ((WaslaProfile?, String?) -> Unit) = { profile, lookupError ->
                         if (profile == null) { loading = false; error = lookupError }
                         else openWaslaChat(currentUser, profile) { id, openError ->
                             loading = false
@@ -397,15 +439,62 @@ fun ContactsHome(currentUser: FirebaseUser) {
                             else chat = WaslaChat(id, profile.uid, profile.name, "", System.currentTimeMillis())
                         }
                     }
+                    if (query.contains("@")) lookupWaslaUser(query, lookup)
+                    else lookupWaslaUserByPhone(query, lookup)
                 },
-                enabled = !loading && email.isNotBlank(),
+                enabled = !loading && search.isNotBlank(),
                 modifier = Modifier.fillMaxWidth()
             ) {
                 if (loading) CircularProgressIndicator(Modifier.size(18.dp)) else Text("بحث وفتح محادثة")
             }
-            if (error != null) Text(error!!, color = Color(0xFFFFA0A0), fontSize = 12.sp, modifier = Modifier.padding(top = 10.dp))
-            Spacer(Modifier.height(20.dp))
-            Text("ملاحظة: البحث يتم بالبريد الإلكتروني المسجل، ولا يتم رفع دفتر عناوين هاتفك.", color = Color(0xFF9BAFC3), fontSize = 12.sp, lineHeight = 19.sp)
+            if (error != null) Text(error!!, color = Color(0xFFFFA0A0), fontSize = 12.sp, modifier = Modifier.padding(top = 9.dp))
+            Spacer(Modifier.height(16.dp))
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text("جهات اتصال الهاتف", color = Color(0xFFEAF8FF), fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
+                TextButton(onClick = {
+                    if (permissionGranted) deviceContacts = readDeviceContacts(context)
+                    else permissionLauncher.launch(android.Manifest.permission.READ_CONTACTS)
+                }) { Text(if (permissionGranted) "تحديث" else "السماح بالوصول") }
+            }
+            Text("الأسماء والأرقام تظل على جهازك. لا نرفع دفتر العناوين؛ عند الضغط على تحقق نبحث عن الرقم المحدد فقط.", color = Color(0xFF9BAFC3), fontSize = 11.sp, lineHeight = 17.sp)
+            Spacer(Modifier.height(8.dp))
+            if (!permissionGranted) {
+                Text("اسمح بالوصول لعرض جهات اتصالك والبحث عن أصدقائك على WASLA.", color = Color(0xFF9BAFC3), fontSize = 13.sp, modifier = Modifier.padding(vertical = 14.dp))
+            } else if (deviceContacts.isEmpty()) {
+                Text("لا توجد جهات اتصال بأرقام هاتف محفوظة.", color = Color(0xFF9BAFC3), fontSize = 13.sp, modifier = Modifier.padding(vertical = 14.dp))
+            } else {
+                androidx.compose.foundation.lazy.LazyColumn(
+                    modifier = Modifier.weight(1f),
+                    verticalArrangement = Arrangement.spacedBy(7.dp),
+                    contentPadding = PaddingValues(bottom = 20.dp)
+                ) {
+                    items(deviceContacts, key = { normalizeWaslaPhone(it.second) }) { contact ->
+                        Row(
+                            Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).background(Color(0x241EADC8)).padding(11.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Column(Modifier.weight(1f)) {
+                                Text(contact.first, color = Color(0xFFEAF8FF), fontWeight = FontWeight.SemiBold, maxLines = 1)
+                                Text(contact.second, color = Color(0xFF9BAFC3), fontSize = 11.sp)
+                            }
+                            TextButton(onClick = {
+                                if (!loading) {
+                                    loading = true
+                                    error = null
+                                    lookupWaslaUserByPhone(contact.second) { profile, lookupError ->
+                                        if (profile == null) { loading = false; error = lookupError }
+                                        else openWaslaChat(currentUser, profile) { id, openError ->
+                                            loading = false
+                                            if (id == null) error = openError
+                                            else chat = WaslaChat(id, profile.uid, profile.name, "", System.currentTimeMillis())
+                                        }
+                                    }
+                                }
+                            }, enabled = !loading) { Text("تحقق") }
+                        }
+                    }
+                }
+            }
         }
     }
 }
