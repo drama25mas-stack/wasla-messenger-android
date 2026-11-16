@@ -79,7 +79,7 @@ private fun WaslaRoot() {
     if (currentUser == null) {
         AuthScreen(onAuthenticated = { currentUser = it })
     } else {
-        WaslaApp(onSignOut = { auth.signOut() })
+        WaslaApp(currentUser = currentUser!!, onSignOut = { auth.signOut() })
     }
 }
 
@@ -193,6 +193,7 @@ private fun AuthScreen(onAuthenticated: (FirebaseUser) -> Unit) {
                                             showError("تم إنشاء الحساب لكن تعذر تحميل بياناته.")
                                         } else {
                                             user.updateProfile(profile).addOnCompleteListener {
+                                                saveWaslaProfile(user, name.trim()) { }
                                                 user.sendEmailVerification().addOnCompleteListener { verification ->
                                                     auth.signOut()
                                                     loading = false
@@ -291,7 +292,7 @@ private val AppBackground = Brush.verticalGradient(
 )
 
 @Composable
-private fun WaslaApp(onSignOut: () -> Unit) {
+private fun WaslaApp(currentUser: FirebaseUser, onSignOut: () -> Unit) {
     var selected by rememberSaveable { mutableIntStateOf(0) }
 
     CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
@@ -303,7 +304,7 @@ private fun WaslaApp(onSignOut: () -> Unit) {
                     WaslaHeader()
                     Box(Modifier.weight(1f).fillMaxWidth()) {
                         when (selected) {
-                            0 -> ChatsHome()
+                            0 -> MessagingHome(currentUser)
                             1 -> FeatureEmpty(Icons.Default.PeopleAlt, "جهات الاتصال", "عند تنفيذ ربط جهات الاتصال ستظهر هنا الأسماء التي لديها حساب WASLA، مع تحكم كامل في إذن الوصول.")
                             2 -> FeatureEmpty(Icons.Default.WifiTethering, "اتصال قريب", "سيظهر هنا اكتشاف الأجهزة القريبة والاتصال المباشر. لن نعرض أجهزة وهمية أو ندّعي وجود اتصال غير فعّال.")
                             3 -> FeatureEmpty(Icons.Default.Groups, "المجموعات والقنوات", "ستتمكن هنا من إنشاء مجموعات وقنوات وإدارة أعضائها بعد توصيل نظام الحسابات والرسائل.")
