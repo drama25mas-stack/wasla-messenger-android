@@ -308,7 +308,7 @@ private fun WaslaApp(currentUser: FirebaseUser, onSignOut: () -> Unit) {
                         when (selected) {
                             0 -> MessagingHome(currentUser)
                             1 -> FeatureEmpty(Icons.Default.PeopleAlt, "جهات الاتصال", "عند تنفيذ ربط جهات الاتصال ستظهر هنا الأسماء التي لديها حساب WASLA، مع تحكم كامل في إذن الوصول.")
-                            2 -> FeatureEmpty(Icons.Default.WifiTethering, "اتصال قريب", "سيظهر هنا اكتشاف الأجهزة القريبة والاتصال المباشر. لن نعرض أجهزة وهمية أو ندّعي وجود اتصال غير فعّال.")
+                            2 -> NearbyMessagingScreen()
                             3 -> FeatureEmpty(Icons.Default.Groups, "المجموعات والقنوات", "ستتمكن هنا من إنشاء مجموعات وقنوات وإدارة أعضائها بعد توصيل نظام الحسابات والرسائل.")
                             else -> SettingsHome(onSignOut)
                         }
