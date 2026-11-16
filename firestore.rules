@@ -20,6 +20,9 @@ service cloud.firestore {
       allow create, update: if signedIn() && request.auth.uid == uid;
       allow get: if signedIn();
       allow list, delete: if false;
+      match /devices/{deviceId} {
+        allow read, write: if signedIn() && request.auth.uid == uid;
+      }
     }
 
     // Exact email lookup only: clients cannot enumerate the user directory.
