@@ -50,6 +50,63 @@ fun saveWaslaProfile(user: FirebaseUser, displayName: String, done: (Boolean) ->
     batch.commit().addOnCompleteListener { done(it.isSuccessful) }
 }
 
+fun normalizeWaslaPhone(phone: String): String {
+    var digits = phone.filter { it.isDigit() }
+    if (digits.startsWith("00")) digits = digits.drop(2)
+    if (digits.startsWith("0") && digits.length == 11) digits = "20" + digits.drop(1)
+    return digits
+}
+
+fun saveWaslaPhone(user: FirebaseUser, phone: String, done: (Boolean, String?) -> Unit) {
+    val normalized = normalizeWaslaPhone(phone)
+    if (normalized.length !in 10..15) {
+        done(false, "اكتب رقم هاتف صحيحًا مع مفتاح الدولة.")
+        return
+    }
+    val email = user.email?.trim()?.lowercase().orEmpty()
+    val name = user.displayName?.takeIf { it.isNotBlank() } ?: email.substringBefore("@")
+    val profileRef = WaslaDb.collection("profiles").document(user.uid)
+    val lookupRef = WaslaDb.collection("phone_lookup").document(normalized)
+    val profileData = mapOf("phone" to normalized, "updatedAt" to FieldValue.serverTimestamp())
+    val lookupData = mapOf(
+        "uid" to user.uid,
+        "displayName" to name,
+        "email" to email,
+        "phone" to normalized,
+        "updatedAt" to FieldValue.serverTimestamp()
+    )
+    WaslaDb.runBatch { batch ->
+        batch.set(profileRef, profileData, SetOptions.merge())
+        batch.set(lookupRef, lookupData, SetOptions.merge())
+    }.addOnSuccessListener { done(true, null) }
+        .addOnFailureListener { done(false, "تعذر حفظ الرقم. تأكد من نشر قواعد Firestore المحدّثة.") }
+}
+
+fun lookupWaslaUserByPhone(phone: String, done: (WaslaProfile?, String?) -> Unit) {
+    val normalized = normalizeWaslaPhone(phone)
+    if (normalized.length !in 10..15) {
+        done(null, "اكتب رقم هاتف صحيحًا.")
+        return
+    }
+    WaslaDb.collection("phone_lookup").document(normalized).get()
+        .addOnSuccessListener { snap ->
+            val uid = snap.getString("uid").orEmpty()
+            if (!snap.exists() || uid.isBlank()) {
+                done(null, "لا يوجد حساب WASLA مسجل بهذا الرقم.")
+            } else {
+                done(
+                    WaslaProfile(
+                        uid,
+                        snap.getString("displayName").orEmpty().ifBlank { "مستخدم WASLA" },
+                        snap.getString("email").orEmpty()
+                    ),
+                    null
+                )
+            }
+        }
+        .addOnFailureListener { done(null, "تعذر البحث بالرقم. راجع قواعد Firestore واتصال الإنترنت.") }
+}
+
 fun lookupWaslaUser(email: String, done: (WaslaProfile?, String?) -> Unit) {
     val normalized = email.trim().lowercase()
     if (!android.util.Patterns.EMAIL_ADDRESS.matcher(normalized).matches()) {
