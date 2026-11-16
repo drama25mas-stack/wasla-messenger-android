@@ -318,8 +318,14 @@ private fun WaslaChatScreen(currentUser: FirebaseUser, chat: WaslaChat, onBack: 
     DisposableEffect(chat.id) {
         val registration = listenWaslaMessages(chat.id, { incoming ->
             messages = incoming; error = null
-            if (readReceiptsEnabled) incoming.filter { it.senderId != currentUser.uid && currentUser.uid !in it.readBy } else emptyList()
-                .forEach { markDirectMessageRead(chat.id, it.id, currentUser.uid) }
+            val unread = if (readReceiptsEnabled) {
+                incoming.filter { it.senderId != currentUser.uid && currentUser.uid !in it.readBy }
+            } else {
+                emptyList()
+            }
+            unread.forEach { message ->
+                markDirectMessageRead(chat.id, message.id, currentUser.uid)
+            }
         }, { error = it })
         onDispose { registration.remove() }
     }
