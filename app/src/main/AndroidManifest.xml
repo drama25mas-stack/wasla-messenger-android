@@ -17,6 +17,13 @@
     <uses-feature android:name="android.hardware.bluetooth" android:required="false" />
     <uses-feature android:name="android.hardware.wifi" android:required="false" />
     <application android:allowBackup="false" android:label="WASLA" android:supportsRtl="true" android:theme="@android:style/Theme.Material.Light.NoActionBar">
+        <service
+            android:name=".WaslaMessagingService"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="com.google.firebase.MESSAGING_EVENT" />
+            </intent-filter>
+        </service>
         <activity android:name=".MainActivity" android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
